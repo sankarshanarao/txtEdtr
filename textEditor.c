@@ -94,6 +94,18 @@ void op_print_text(struct text_node *text);
 int main() {
 	struct line_node *cursor;
 	struct text_node *text = create_text(&cursor);
+
+
+//    op_insert_char(cursor,'a');
+//    op_insert_char(cursor,'b');
+//	printf("%d,%d,%d",text,text,text->line_begin->line_header);
+//	op_print_line(text->line_begin);
+
+
+
+
+
+
 	char op[4];
 
 	do {
@@ -166,19 +178,74 @@ struct text_node *create_text(struct line_node **pcursor)
 
 void free_text(struct text_node *text)
 {
-    return;
+    if(text!=NULL)
+    {
+        TEXT * tp = text;
+        LINE * lp = NULL;
+
+        while(tp->next_line!=NULL)
+        {
+            lp = tp->line_begin;
+            while(lp->next_char!=NULL)
+            {
+                lp = lp->next_char;
+                free(lp->prev_char);
+            }
+            tp = tp->next_line;
+            free(tp->prev_line);
+        }
+    }
 }
 
 struct line_node *op_insert_char(struct line_node *cursor, char ch)
 {
-    return NULL;
+    if(cursor!=NULL)
+    {
+        LINE * newC = (LINE*)malloc(sizeof(LINE));
+        newC->ch = ch;
+        newC->next_char = cursor;
+        newC->prev_char = cursor->prev_char;
+        newC->line_header = cursor->line_header;
+        if(cursor->prev_char==NULL)                           //When cursor is on empty line
+            cursor->line_header->line_begin = newC;
+        else
+            cursor->prev_char->next_char = newC;
+        cursor->prev_char = newC;
+        return cursor;
+    }
 }
 
 struct line_node *op_pressed_enter(struct line_node *cursor)
 {
     if(cursor!=NULL)
     {
-        if(cursor->line_header
+        TEXT * newT = (TEXT*)malloc(sizeof(TEXT));               //Create new Line and inserted after cursors line
+        newT->next_line = cursor->line_header->next_line;
+        newT->prev_line = cursor->line_header;
+        newT->line_begin = cursor;
+
+        cursor->line_header->next_line = newT;
+
+        LINE * newL = (LINE*)malloc(sizeof(LINE));              //Created new line node and stored \n in it
+        newL->ch = '\n';                                        //Appended it instead of cursor
+        newL->line_header=cursor->line_header;
+        newL->next_char=NULL;
+        newL->prev_char=cursor->prev_char;
+
+        if(cursor->prev_char==NULL)  //Enter was hit in the beginning of the line
+            cursor->line_header->line_begin = newL;
+        else
+            cursor->prev_char->next_char = newL;
+
+        cursor->prev_char = NULL;
+
+        LINE * p = cursor;
+        while(p!=NULL)
+        {
+            p->line_header = newT;
+            p=p->next_char;
+        }
+        return cursor;
     }
 }
 
@@ -220,10 +287,22 @@ struct line_node *op_pressed_end(struct line_node *cursor)
 
 void op_print_line(struct line_node *cursor)
 {
-    return;
+    LINE * p;
+    p=cursor->line_header->line_begin;
+    while(p!=NULL)
+    {
+        printf("%c",p->ch);
+        p=p->next_char;
+    }
 }
 
 void op_print_text(struct text_node *text)
 {
-    return;
+    TEXT * p;
+    p=text;
+    while(p!=NULL)
+    {
+        op_print_line(p->line_begin);
+        p=p->next_line;
+    }
 }
